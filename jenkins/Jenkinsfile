@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('jenkins-docker')
+        DOCKER_IMAGE_FRONTEND = 'your-docker-repo/game-library-frontend'
+        DOCKER_IMAGE_BACKEND = 'your-docker-repo/game-library-backend'
+    }
+
+    stages {
+        stage('Build Frontend') {
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE_FRONTEND}:latest ./frontend'
+                }
+            }
+        }
+        stage('Build Backend') {
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE_BACKEND}:latest ./backend'
+                }
+            }
+        }
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    sh 'docker login -u ${DOCKERHUB_CREDENTIALS_USR} -p ${DOCKERHUB_CREDENTIALS_PSW}'
+                    sh 'docker push ${DOCKER_IMAGE_FRONTEND}:latest'
+                    sh 'docker push ${DOCKER_IMAGE_BACKEND}:latest'
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh 'kubectl apply -f k8s/frontend-deployment.yaml'
+                    sh 'kubectl apply -f k8s/backend-deployment.yaml'
+                    sh 'kubectl apply -f k8s/database-deployment.yaml'
+                }
+            }
+        }
+    }
+}
